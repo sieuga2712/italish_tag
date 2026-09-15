@@ -73,6 +73,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
           Text('Thêm từ mới', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 16),
           TextField(
+            key: const Key('quickAddWordField'),
             controller: _controller,
             focusNode: _focusNode,
             autofocus: true,

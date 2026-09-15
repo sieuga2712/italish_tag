@@ -12,9 +12,7 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: const Center(
-        child: Text('Settings — coming in a later phase'),
-      ),
+      body: const Center(child: Text('Settings — coming in a later phase')),
     );
   }
 }

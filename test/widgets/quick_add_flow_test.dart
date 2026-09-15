@@ -61,12 +61,15 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Inbox trống'), findsOneWidget);
+    expect(find.textContaining('Chưa có từ nào'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.add));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), 'consequently');
+    await tester.enterText(
+      find.byKey(const Key('quickAddWordField')),
+      'consequently',
+    );
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
     await tester.pumpAndSettle();
 
@@ -76,9 +79,7 @@ void main() {
     await disposeApp(tester);
   });
 
-  testWidgets('quick add rejects a case-insensitive duplicate', (
-    tester,
-  ) async {
+  testWidgets('quick add rejects a case-insensitive duplicate', (tester) async {
     await db.into(db.words).insert(WordsCompanion.insert(word: 'Efficient'));
 
     await tester.pumpWidget(buildApp());
@@ -86,7 +87,10 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.add));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'efficient');
+    await tester.enterText(
+      find.byKey(const Key('quickAddWordField')),
+      'efficient',
+    );
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
     await tester.pumpAndSettle();
 

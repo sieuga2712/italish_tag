@@ -42,7 +42,10 @@ void main() {
 
     await tester.tap(find.widgetWithText(NavigationDestination, 'Words'));
     await tester.pumpAndSettle();
-    expect(find.text('Inbox trống.\nBấm nút + để thêm từ mới.'), findsOneWidget);
+    expect(
+      find.text('Chưa có từ nào.\nBấm nút + để thêm từ mới.'),
+      findsOneWidget,
+    );
 
     await tester.tap(find.widgetWithText(NavigationDestination, 'Tags'));
     await tester.pumpAndSettle();
@@ -50,10 +53,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(NavigationDestination, 'Review'));
     await tester.pumpAndSettle();
-    expect(
-      find.text('Review queue — coming in a later phase'),
-      findsOneWidget,
-    );
+    expect(find.text('Review queue — coming in a later phase'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(NavigationDestination, 'Settings'));
     await tester.pumpAndSettle();

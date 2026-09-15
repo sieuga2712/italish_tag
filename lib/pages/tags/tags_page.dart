@@ -13,9 +13,7 @@ class TagsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Tags')),
-      body: const Center(
-        child: Text('Tag list — coming in a later phase'),
-      ),
+      body: const Center(child: Text('Tag list — coming in a later phase')),
     );
   }
 }

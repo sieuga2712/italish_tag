@@ -13,9 +13,7 @@ class ReviewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Review')),
-      body: const Center(
-        child: Text('Review queue — coming in a later phase'),
-      ),
+      body: const Center(child: Text('Review queue — coming in a later phase')),
     );
   }
 }

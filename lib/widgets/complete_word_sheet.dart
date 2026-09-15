@@ -97,7 +97,10 @@ class _CompleteWordSheetState extends ConsumerState<CompleteWordSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(widget.word.word, style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              widget.word.word,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: _meaningController,

@@ -25,28 +25,34 @@ void main() {
   });
 
   test('insert word with vi/it translations and attach two tags', () async {
-    final tagItId = await db.into(db.tags).insert(TagsCompanion.insert(name: 'IT'));
-    final tagB1Id = await db.into(db.tags).insert(TagsCompanion.insert(name: 'B1'));
+    final tagItId = await db
+        .into(db.tags)
+        .insert(TagsCompanion.insert(name: 'IT'));
+    final tagB1Id = await db
+        .into(db.tags)
+        .insert(TagsCompanion.insert(name: 'B1'));
 
-    final wordId = await db.into(db.words).insert(
-      WordsCompanion.insert(
-        word: 'efficient',
-        meaning: const Value('làm việc tốt, không lãng phí'),
-        translation: const Value('hiệu quả'),
-        italianTranslation: const Value('efficiente'),
-      ),
-    );
+    final wordId = await db
+        .into(db.words)
+        .insert(
+          WordsCompanion.insert(
+            word: 'efficient',
+            meaning: const Value('làm việc tốt, không lãng phí'),
+            translation: const Value('hiệu quả'),
+            italianTranslation: const Value('efficiente'),
+          ),
+        );
 
-    await db.into(db.wordTags).insert(
-      WordTagsCompanion.insert(wordId: wordId, tagId: tagItId),
-    );
-    await db.into(db.wordTags).insert(
-      WordTagsCompanion.insert(wordId: wordId, tagId: tagB1Id),
-    );
+    await db
+        .into(db.wordTags)
+        .insert(WordTagsCompanion.insert(wordId: wordId, tagId: tagItId));
+    await db
+        .into(db.wordTags)
+        .insert(WordTagsCompanion.insert(wordId: wordId, tagId: tagB1Id));
 
-    final storedWord =
-        await (db.select(db.words)..where((w) => w.id.equals(wordId)))
-            .getSingle();
+    final storedWord = await (db.select(
+      db.words,
+    )..where((w) => w.id.equals(wordId))).getSingle();
 
     expect(storedWord.word, 'efficient');
     expect(storedWord.translation, 'hiệu quả');
@@ -55,83 +61,98 @@ void main() {
     expect(storedWord.status, WordStatus.newWord);
     expect(storedWord.stepIndex, 0);
 
-    final tagsForWord = await (db.select(db.wordTags).join([
-      innerJoin(db.tags, db.tags.id.equalsExp(db.wordTags.tagId)),
-    ])..where(db.wordTags.wordId.equals(wordId)))
-        .map((row) => row.readTable(db.tags))
-        .get();
+    final tagsForWord =
+        await (db.select(db.wordTags).join([
+              innerJoin(db.tags, db.tags.id.equalsExp(db.wordTags.tagId)),
+            ])..where(db.wordTags.wordId.equals(wordId)))
+            .map((row) => row.readTable(db.tags))
+            .get();
 
     expect(tagsForWord.map((t) => t.name), containsAll(['IT', 'B1']));
 
-    final wordsForItTag = await (db.select(db.wordTags).join([
-      innerJoin(db.words, db.words.id.equalsExp(db.wordTags.wordId)),
-    ])..where(db.wordTags.tagId.equals(tagItId)))
-        .map((row) => row.readTable(db.words))
-        .get();
+    final wordsForItTag =
+        await (db.select(db.wordTags).join([
+              innerJoin(db.words, db.words.id.equalsExp(db.wordTags.wordId)),
+            ])..where(db.wordTags.tagId.equals(tagItId)))
+            .map((row) => row.readTable(db.words))
+            .get();
 
     expect(wordsForItTag.map((w) => w.word), ['efficient']);
   });
 
   test('review session + review history round trip', () async {
-    final wordId = await db.into(
-      db.words,
-    ).insert(WordsCompanion.insert(word: 'consequently'));
+    final wordId = await db
+        .into(db.words)
+        .insert(WordsCompanion.insert(word: 'consequently'));
 
-    final sessionId = await db.into(db.reviewSessions).insert(
-      ReviewSessionsCompanion.insert(sourceType: ReviewSourceType.due),
-    );
+    final sessionId = await db
+        .into(db.reviewSessions)
+        .insert(
+          ReviewSessionsCompanion.insert(sourceType: ReviewSourceType.due),
+        );
 
-    await db.into(db.reviewHistory).insert(
-      ReviewHistoryCompanion.insert(
-        wordId: wordId,
-        reviewSessionId: sessionId,
-        questionType: ReviewQuestionType.wordToMeaning,
-        isCorrect: true,
-        rating: ReviewRating.good,
-      ),
-    );
+    await db
+        .into(db.reviewHistory)
+        .insert(
+          ReviewHistoryCompanion.insert(
+            wordId: wordId,
+            reviewSessionId: sessionId,
+            questionType: ReviewQuestionType.wordToMeaning,
+            isCorrect: true,
+            rating: ReviewRating.good,
+          ),
+        );
 
-    final history =
-        await (db.select(db.reviewHistory)..where((h) => h.wordId.equals(wordId)))
-            .get();
+    final history = await (db.select(
+      db.reviewHistory,
+    )..where((h) => h.wordId.equals(wordId))).get();
 
     expect(history, hasLength(1));
     expect(history.single.rating, ReviewRating.good);
     expect(history.single.questionType, ReviewQuestionType.wordToMeaning);
   });
 
-  test('deleting a word cascades to its tag links and review history', () async {
-    final tagId = await db.into(
-      db.tags,
-    ).insert(TagsCompanion.insert(name: 'IT'));
-    final wordId = await db.into(
-      db.words,
-    ).insert(WordsCompanion.insert(word: 'deprecated'));
-    await db.into(db.wordTags).insert(
-      WordTagsCompanion.insert(wordId: wordId, tagId: tagId),
-    );
-    final sessionId = await db.into(db.reviewSessions).insert(
-      ReviewSessionsCompanion.insert(sourceType: ReviewSourceType.newWords),
-    );
-    await db.into(db.reviewHistory).insert(
-      ReviewHistoryCompanion.insert(
-        wordId: wordId,
-        reviewSessionId: sessionId,
-        questionType: ReviewQuestionType.wordToMeaning,
-        isCorrect: false,
-        rating: ReviewRating.forgot,
-      ),
-    );
+  test(
+    'deleting a word cascades to its tag links and review history',
+    () async {
+      final tagId = await db
+          .into(db.tags)
+          .insert(TagsCompanion.insert(name: 'IT'));
+      final wordId = await db
+          .into(db.words)
+          .insert(WordsCompanion.insert(word: 'deprecated'));
+      await db
+          .into(db.wordTags)
+          .insert(WordTagsCompanion.insert(wordId: wordId, tagId: tagId));
+      final sessionId = await db
+          .into(db.reviewSessions)
+          .insert(
+            ReviewSessionsCompanion.insert(
+              sourceType: ReviewSourceType.newWords,
+            ),
+          );
+      await db
+          .into(db.reviewHistory)
+          .insert(
+            ReviewHistoryCompanion.insert(
+              wordId: wordId,
+              reviewSessionId: sessionId,
+              questionType: ReviewQuestionType.wordToMeaning,
+              isCorrect: false,
+              rating: ReviewRating.forgot,
+            ),
+          );
 
-    await (db.delete(db.words)..where((w) => w.id.equals(wordId))).go();
+      await (db.delete(db.words)..where((w) => w.id.equals(wordId))).go();
 
-    final remainingLinks = await db.select(db.wordTags).get();
-    final remainingHistory = await db.select(db.reviewHistory).get();
-    // The tag itself must survive - only the link to the deleted word goes.
-    final remainingTags = await db.select(db.tags).get();
+      final remainingLinks = await db.select(db.wordTags).get();
+      final remainingHistory = await db.select(db.reviewHistory).get();
+      // The tag itself must survive - only the link to the deleted word goes.
+      final remainingTags = await db.select(db.tags).get();
 
-    expect(remainingLinks, isEmpty);
-    expect(remainingHistory, isEmpty);
-    expect(remainingTags, hasLength(1));
-  });
+      expect(remainingLinks, isEmpty);
+      expect(remainingHistory, isEmpty);
+      expect(remainingTags, hasLength(1));
+    },
+  );
 }

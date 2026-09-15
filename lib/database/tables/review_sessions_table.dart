@@ -8,8 +8,7 @@ enum ReviewSourceType { due, weak, newWords, tag, mixed }
 class ReviewSessions extends Table {
   IntColumn get id => integer().autoIncrement()();
 
-  DateTimeColumn get startedAt =>
-      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get startedAt => dateTime().withDefault(currentDateAndTime)();
 
   /// Null while the session is still in progress.
   DateTimeColumn get finishedAt => dateTime().nullable()();

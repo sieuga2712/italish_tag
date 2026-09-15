@@ -36,8 +36,8 @@ class ReviewHistory extends Table {
   /// Every review — even a single "Review this word" from the Word Detail
   /// screen — happens inside a session (a 1-word session in that case),
   /// so this is intentionally non-nullable.
-  IntColumn get reviewSessionId => integer()
-      .references(ReviewSessions, #id, onDelete: KeyAction.cascade)();
+  IntColumn get reviewSessionId =>
+      integer().references(ReviewSessions, #id, onDelete: KeyAction.cascade)();
 
   TextColumn get questionType => textEnum<ReviewQuestionType>()();
 
@@ -50,6 +50,5 @@ class ReviewHistory extends Table {
   IntColumn get previousStepIndex => integer().nullable()();
   IntColumn get newStepIndex => integer().nullable()();
 
-  DateTimeColumn get reviewedAt =>
-      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get reviewedAt => dateTime().withDefault(currentDateAndTime)();
 }
