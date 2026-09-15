@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../pages/home/home_page.dart';
 import '../pages/review/review_page.dart';
 import '../pages/settings/settings_page.dart';
+import '../pages/tags/tag_words_page.dart';
 import '../pages/tags/tags_page.dart';
 import '../pages/words/words_page.dart';
 import '../widgets/main_scaffold.dart';
@@ -47,6 +48,16 @@ final GoRouter appRouter = GoRouter(
             GoRoute(
               path: '/tags',
               builder: (context, state) => const TagsPage(),
+              routes: [
+                GoRoute(
+                  path: ':tagId',
+                  builder: (context, state) {
+                    final tagId = int.parse(state.pathParameters['tagId']!);
+                    final tagName = state.extra as String? ?? '';
+                    return TagWordsPage(tagId: tagId, tagName: tagName);
+                  },
+                ),
+              ],
             ),
           ],
         ),

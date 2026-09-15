@@ -49,7 +49,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(NavigationDestination, 'Tags'));
     await tester.pumpAndSettle();
-    expect(find.text('Tag list — coming in a later phase'), findsOneWidget);
+    expect(find.textContaining('Chưa có tag nào'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(NavigationDestination, 'Review'));
     await tester.pumpAndSettle();

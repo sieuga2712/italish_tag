@@ -4,14 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../database/app_database.dart';
+import '../providers/tag_providers.dart';
 import '../providers/word_providers.dart';
+import 'tag_picker_sheet.dart';
 
-/// Modal bottom sheet to fill in the fields Quick Add skipped.
+/// Modal bottom sheet to fill in the fields Quick Add skipped, plus
+/// managing this word's tags.
 ///
-/// Kept intentionally small for Phase 3: Meaning, Vietnamese translation,
-/// Italian translation, one Example, Notes. Tags aren't here yet because
-/// the Tag system doesn't exist until Phase 5; multi-example/synonym/
-/// antonym editing belongs to the full Word Detail screen (Phase 6).
+/// Kept intentionally small: Meaning, Vietnamese translation, Italian
+/// translation, one Example, Notes, Tags. Multi-example/synonym/antonym
+/// editing belongs to the full Word Detail screen (Phase 6).
 class CompleteWordSheet extends ConsumerStatefulWidget {
   const CompleteWordSheet({super.key, required this.word});
 
@@ -133,6 +135,8 @@ class _CompleteWordSheetState extends ConsumerState<CompleteWordSheet> {
               maxLines: 2,
             ),
             const SizedBox(height: 16),
+            _TagsSection(wordId: widget.word.id),
+            const SizedBox(height: 16),
             FilledButton(
               onPressed: _isSaving ? null : _save,
               child: _isSaving
@@ -146,6 +150,55 @@ class _CompleteWordSheetState extends ConsumerState<CompleteWordSheet> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Shows this word's current tags as removable chips, plus an "Add tag"
+/// chip that opens [TagPickerSheet]. A separate widget (rather than inline
+/// in `_CompleteWordSheetState.build`) so watching `tagsForWordProvider`
+/// only rebuilds this small section, not the whole form.
+class _TagsSection extends ConsumerWidget {
+  const _TagsSection({required this.wordId});
+
+  final int wordId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tags = ref.watch(tagsForWordProvider(wordId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Tags', style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ...tags.value?.map(
+                  (tag) => Chip(
+                    label: Text(tag.name),
+                    onDeleted: () => ref
+                        .read(tagRepositoryProvider)
+                        .removeTagFromWord(wordId, tag.id),
+                  ),
+                ) ??
+                const [],
+            ActionChip(
+              avatar: const Icon(Icons.add, size: 18),
+              label: const Text('Add tag'),
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (context) => TagPickerSheet(wordId: wordId),
+                );
+              },
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
