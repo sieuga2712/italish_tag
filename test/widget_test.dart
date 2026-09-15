@@ -53,7 +53,8 @@ void main() {
 
     await tester.tap(find.widgetWithText(NavigationDestination, 'Review'));
     await tester.pumpAndSettle();
-    expect(find.text('Review queue — coming in a later phase'), findsOneWidget);
+    expect(find.text('TODAY'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Start Review'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(NavigationDestination, 'Settings'));
     await tester.pumpAndSettle();

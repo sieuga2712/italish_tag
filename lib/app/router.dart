@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import '../database/app_database.dart';
 import '../pages/home/home_page.dart';
 import '../pages/review/review_page.dart';
+import '../pages/review/review_session_args.dart';
+import '../pages/review/review_session_page.dart';
 import '../pages/settings/settings_page.dart';
 import '../pages/tags/tag_words_page.dart';
 import '../pages/tags/tags_page.dart';
@@ -92,6 +94,16 @@ final GoRouter appRouter = GoRouter(
         final wordId = int.parse(state.pathParameters['wordId']!);
         final initialWord = state.extra as Word?;
         return WordDetailPage(wordId: wordId, initialWord: initialWord);
+      },
+    ),
+    // Also top-level: a focused, single-question flow with no bottom nav,
+    // built by ReviewPage (queue + session already created) rather than
+    // fetching anything itself — see ReviewSessionArgs.
+    GoRoute(
+      path: '/review-session',
+      builder: (context, state) {
+        final args = state.extra as ReviewSessionArgs;
+        return ReviewSessionPage(args: args);
       },
     ),
   ],
