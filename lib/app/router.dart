@@ -1,10 +1,12 @@
 import 'package:go_router/go_router.dart';
 
+import '../database/app_database.dart';
 import '../pages/home/home_page.dart';
 import '../pages/review/review_page.dart';
 import '../pages/settings/settings_page.dart';
 import '../pages/tags/tag_words_page.dart';
 import '../pages/tags/tags_page.dart';
+import '../pages/words/word_detail_page.dart';
 import '../pages/words/words_page.dart';
 import '../widgets/main_scaffold.dart';
 
@@ -78,6 +80,19 @@ final GoRouter appRouter = GoRouter(
           ],
         ),
       ],
+    ),
+    // Top-level (outside the shell) rather than nested under the /words
+    // branch: Word Detail is reachable from several different tabs (Words,
+    // a tag's word list, Inbox), and covering the whole screen — no bottom
+    // nav, a back button instead — makes sense regardless of which tab it
+    // was opened from.
+    GoRoute(
+      path: '/words/:wordId',
+      builder: (context, state) {
+        final wordId = int.parse(state.pathParameters['wordId']!);
+        final initialWord = state.extra as Word?;
+        return WordDetailPage(wordId: wordId, initialWord: initialWord);
+      },
     ),
   ],
 );

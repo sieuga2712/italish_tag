@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../providers/tag_providers.dart';
-import '../../widgets/complete_word_sheet.dart';
 
 /// Shown when tapping a tag on the Tags screen: every word carrying that
-/// tag. Tapping a word opens the same enrichment sheet used everywhere
-/// else, so tags can be added/removed from here too.
+/// tag. Tapping a word opens the Word Detail screen, same as everywhere
+/// else, so tags (and everything else) can be edited from here too.
 class TagWordsPage extends ConsumerWidget {
   const TagWordsPage({super.key, required this.tagId, required this.tagName});
 
@@ -41,13 +41,7 @@ class TagWordsPage extends ConsumerWidget {
               return ListTile(
                 title: Text(word.word),
                 subtitle: Text(hasMeaning ? word.meaning! : 'Chưa có nghĩa'),
-                onTap: () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    builder: (context) => CompleteWordSheet(word: word),
-                  );
-                },
+                onTap: () => context.push('/words/${word.id}', extra: word),
               );
             },
           );

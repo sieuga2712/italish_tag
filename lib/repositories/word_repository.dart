@@ -162,30 +162,73 @@ class WordRepository {
     );
   }
 
-  /// Fills in the fields Quick Add intentionally skips. This always writes
-  /// a full snapshot of the enrichment form — a `null` argument clears that
-  /// field (writes SQL NULL), it does not mean "leave unchanged". That
-  /// matches its only caller, `CompleteWordSheet`, which always submits the
-  /// whole form rather than a partial patch.
-  ///
-  /// `example` is a single string for now (Phase 3 keeps the enrichment
-  /// form minimal); it replaces `examplesJson` as a 1-item list. Full
-  /// multi-example editing belongs to the Word Detail screen (Phase 6).
-  Future<void> updateEnrichment(
+  /// One word by id, live — for the Word Detail screen (Phase 6).
+  Stream<Word> watchWord(int wordId) {
+    return (_db.select(
+      _db.words,
+    )..where((w) => w.id.equals(wordId))).watchSingle();
+  }
+
+  /// The free-text fields on the Word Detail screen's "Save" button. This
+  /// always writes a full snapshot — a `null` argument clears that field
+  /// (writes SQL NULL), it does not mean "leave unchanged". List-shaped
+  /// fields (examples/synonyms/antonyms) and tags are saved immediately by
+  /// their own methods instead, since they're edited as add/remove actions
+  /// rather than free text.
+  Future<void> updateDetails(
     int wordId, {
+    required String? pronunciation,
+    required String? partOfSpeech,
     required String? meaning,
     required String? translation,
     required String? italianTranslation,
-    required String? example,
     required String? notes,
   }) {
     return (_db.update(_db.words)..where((w) => w.id.equals(wordId))).write(
       WordsCompanion(
+        pronunciation: Value(pronunciation),
+        partOfSpeech: Value(partOfSpeech),
         meaning: Value(meaning),
         translation: Value(translation),
         italianTranslation: Value(italianTranslation),
-        examplesJson: Value(example == null ? null : jsonEncode([example])),
         notes: Value(notes),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> updateExamples(int wordId, List<String> examples) {
+    return _updateStringList(wordId, examplesJson: examples);
+  }
+
+  Future<void> updateSynonyms(int wordId, List<String> synonyms) {
+    return _updateStringList(wordId, synonymsJson: synonyms);
+  }
+
+  Future<void> updateAntonyms(int wordId, List<String> antonyms) {
+    return _updateStringList(wordId, antonymsJson: antonyms);
+  }
+
+  Future<void> _updateStringList(
+    int wordId, {
+    List<String>? examplesJson,
+    List<String>? synonymsJson,
+    List<String>? antonymsJson,
+  }) {
+    String? encode(List<String>? list) =>
+        list == null ? null : (list.isEmpty ? null : jsonEncode(list));
+
+    return (_db.update(_db.words)..where((w) => w.id.equals(wordId))).write(
+      WordsCompanion(
+        examplesJson: examplesJson == null
+            ? const Value.absent()
+            : Value(encode(examplesJson)),
+        synonymsJson: synonymsJson == null
+            ? const Value.absent()
+            : Value(encode(synonymsJson)),
+        antonymsJson: antonymsJson == null
+            ? const Value.absent()
+            : Value(encode(antonymsJson)),
         updatedAt: Value(DateTime.now()),
       ),
     );

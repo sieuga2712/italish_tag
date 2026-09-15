@@ -56,3 +56,8 @@ final wordsListProvider = StreamProvider.family<List<Word>, WordListQuery>((
         searchQuery: query.search,
       );
 }, name: 'wordsListProvider');
+
+/// One word by id, live — for the Word Detail screen (Phase 6).
+final wordByIdProvider = StreamProvider.family<Word, int>((ref, wordId) {
+  return ref.watch(wordRepositoryProvider).watchWord(wordId);
+}, name: 'wordByIdProvider');

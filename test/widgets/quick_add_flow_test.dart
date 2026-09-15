@@ -1,7 +1,9 @@
 // Phase 3 widget tests, run against an in-memory database:
 // - Quick Add creates a word that shows up in the Inbox
 // - Quick Add rejects a case-insensitive duplicate
-// - Tapping an Inbox word opens the enrichment sheet and saves the meaning
+//
+// Tapping a word to edit it now opens the Word Detail screen (Phase 6),
+// covered in word_detail_page_test.dart instead of here.
 
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -98,28 +100,4 @@ void main() {
 
     await disposeApp(tester);
   });
-
-  testWidgets(
-    'tapping an inbox word opens the complete sheet and saves meaning',
-    (tester) async {
-      await db.into(db.words).insert(WordsCompanion.insert(word: 'ambiguous'));
-
-      await tester.pumpWidget(buildApp());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('ambiguous'));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Meaning'),
-        'không rõ ràng',
-      );
-      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('không rõ ràng'), findsOneWidget);
-
-      await disposeApp(tester);
-    },
-  );
 }

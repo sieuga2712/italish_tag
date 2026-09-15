@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../database/app_database.dart';
 import '../../providers/word_providers.dart';
 import '../../repositories/word_repository.dart';
-import '../../widgets/complete_word_sheet.dart';
 
 String _filterLabel(WordListFilter filter) => switch (filter) {
   WordListFilter.all => 'All',
@@ -190,13 +190,7 @@ class _WordListTile extends ConsumerWidget {
           const Icon(Icons.chevron_right),
         ],
       ),
-      onTap: () {
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          builder: (context) => CompleteWordSheet(word: word),
-        );
-      },
+      onTap: () => context.push('/words/${word.id}', extra: word),
     );
   }
 }
