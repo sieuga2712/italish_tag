@@ -50,6 +50,20 @@ class ReviewRepository {
 
   static bool _isNew(Word word) => word.status == WordStatus.newWord;
 
+  /// Weak words, worst wrong-rate first (ties broken by raw wrong count) —
+  /// shared by [buildQueue]'s weak tier, [watchWeakWords], and
+  /// [getWeakWords] so the ranking rule lives in exactly one place.
+  static List<Word> _sortedWeak(List<Word> words) {
+    final weak = words.where(_isWeak).toList();
+    weak.sort((a, b) {
+      final rateA = a.wrongCount / a.reviewCount;
+      final rateB = b.wrongCount / b.reviewCount;
+      final byRate = rateB.compareTo(rateA);
+      return byRate != 0 ? byRate : b.wrongCount.compareTo(a.wrongCount);
+    });
+    return weak;
+  }
+
   Stream<ReviewQueueCounts> watchQueueCounts() {
     return _db.select(_db.words).watch().map((words) {
       final now = DateTime.now();
@@ -73,13 +87,7 @@ class ReviewRepository {
     final due = allWords.where((w) => _isDue(w, now)).toList()
       ..sort((a, b) => a.nextReviewAt!.compareTo(b.nextReviewAt!));
 
-    final weak = allWords.where(_isWeak).toList()
-      ..sort((a, b) {
-        final rateA = a.wrongCount / a.reviewCount;
-        final rateB = b.wrongCount / b.reviewCount;
-        final byRate = rateB.compareTo(rateA);
-        return byRate != 0 ? byRate : b.wrongCount.compareTo(a.wrongCount);
-      });
+    final weak = _sortedWeak(allWords);
 
     final newWords = allWords.where(_isNew).toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
@@ -198,4 +206,49 @@ class ReviewRepository {
       ),
     );
   }
+
+  /// Live list for the Weak Words screen — same ranking as [buildQueue]'s
+  /// weak tier, but every qualifying word rather than just a count.
+  Stream<List<Word>> watchWeakWords() {
+    return _db.select(_db.words).watch().map(_sortedWeak);
+  }
+
+  /// One-shot version of [watchWeakWords], for building a "Review Weak
+  /// Words" queue — a review session is a fixed snapshot, same reasoning
+  /// as [buildQueue].
+  Future<List<Word>> getWeakWords() async {
+    return _sortedWeak(await _db.select(_db.words).get());
+  }
+
+  /// One word's full review history, most recent first — for the Word
+  /// Detail screen's History section.
+  Stream<List<ReviewHistoryEntry>> watchHistoryForWord(int wordId) {
+    return (_db.select(_db.reviewHistory)
+          ..where((h) => h.wordId.equals(wordId))
+          ..orderBy([(h) => OrderingTerm.desc(h.reviewedAt)]))
+        .watch();
+  }
+
+  /// All-time accuracy across every review ever recorded, computed from
+  /// `ReviewHistory` (the source of truth) rather than summed `Word`
+  /// counters, since history is exactly what "all-time" means.
+  Stream<ReviewStats> watchOverallStats() {
+    return _db.select(_db.reviewHistory).watch().map((rows) {
+      return ReviewStats(
+        totalReviews: rows.length,
+        totalCorrect: rows.where((r) => r.isCorrect).length,
+      );
+    });
+  }
+}
+
+/// All-time review accuracy, for the Weak Words screen's summary line.
+class ReviewStats {
+  ReviewStats({required this.totalReviews, required this.totalCorrect});
+
+  final int totalReviews;
+  final int totalCorrect;
+
+  /// 0 when there have been no reviews yet, rather than NaN.
+  double get accuracy => totalReviews == 0 ? 0 : totalCorrect / totalReviews;
 }

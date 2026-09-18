@@ -5,6 +5,7 @@ import '../pages/home/home_page.dart';
 import '../pages/review/review_page.dart';
 import '../pages/review/review_session_args.dart';
 import '../pages/review/review_session_page.dart';
+import '../pages/review/weak_words_page.dart';
 import '../pages/settings/settings_page.dart';
 import '../pages/tags/tag_words_page.dart';
 import '../pages/tags/tags_page.dart';
@@ -70,6 +71,12 @@ final GoRouter appRouter = GoRouter(
             GoRoute(
               path: '/review',
               builder: (context, state) => const ReviewPage(),
+              routes: [
+                GoRoute(
+                  path: 'weak-words',
+                  builder: (context, state) => const WeakWordsPage(),
+                ),
+              ],
             ),
           ],
         ),

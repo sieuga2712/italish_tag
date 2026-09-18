@@ -13,8 +13,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vocab_library/database/app_database.dart';
 import 'package:vocab_library/database/database_provider.dart';
+import 'package:vocab_library/database/tables/review_history_table.dart';
+import 'package:vocab_library/database/tables/review_sessions_table.dart';
+import 'package:vocab_library/pages/review/review_session_args.dart';
+import 'package:vocab_library/pages/review/review_session_page.dart';
 import 'package:vocab_library/pages/words/word_detail_page.dart';
 import 'package:vocab_library/pages/words/words_page.dart';
+import 'package:vocab_library/repositories/review_repository.dart';
 
 void main() {
   late AppDatabase db;
@@ -44,6 +49,13 @@ void main() {
             final wordId = int.parse(state.pathParameters['wordId']!);
             final initialWord = state.extra as Word?;
             return WordDetailPage(wordId: wordId, initialWord: initialWord);
+          },
+        ),
+        GoRoute(
+          path: '/review-session',
+          builder: (context, state) {
+            final args = state.extra as ReviewSessionArgs;
+            return ReviewSessionPage(args: args);
           },
         ),
       ],
@@ -194,6 +206,68 @@ void main() {
     expect(find.text('Wrong: 0'), findsOneWidget);
     expect(find.text('Last reviewed: Chưa từng ôn'), findsOneWidget);
     expect(find.text('Next review: Chưa lên lịch'), findsOneWidget);
+
+    await disposeApp(tester);
+  });
+
+  testWidgets('the History section lists past reviews, most recent first', (
+    tester,
+  ) async {
+    final reviewRepo = ReviewRepository(db);
+    final wordId = await db
+        .into(db.words)
+        .insert(WordsCompanion.insert(word: 'efficient'));
+    final sessionId = await reviewRepo.startSession(
+      totalWords: 2,
+      sourceType: ReviewSourceType.mixed,
+    );
+    await reviewRepo.recordAnswer(
+      wordId: wordId,
+      sessionId: sessionId,
+      questionType: ReviewQuestionType.wordToMeaning,
+      rating: ReviewRating.forgot,
+    );
+    await reviewRepo.recordAnswer(
+      wordId: wordId,
+      sessionId: sessionId,
+      questionType: ReviewQuestionType.wordToMeaning,
+      rating: ReviewRating.good,
+    );
+
+    await tester.pumpWidget(buildApp(initialLocation: '/words/$wordId'));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const Key('wordDetailScrollView')),
+      const Offset(0, -4000),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Word → Meaning · Nhớ'), findsOneWidget);
+    expect(find.textContaining('Word → Meaning · Quên'), findsOneWidget);
+
+    await disposeApp(tester);
+  });
+
+  testWidgets('Review this word starts a 1-word session', (tester) async {
+    final wordId = await db
+        .into(db.words)
+        .insert(WordsCompanion.insert(word: 'ambiguous'));
+
+    await tester.pumpWidget(buildApp(initialLocation: '/words/$wordId'));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const Key('wordDetailScrollView')),
+      const Offset(0, -2000),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Review this word'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(AppBar, '1 / 1'), findsOneWidget);
+    expect(find.text('ambiguous'), findsOneWidget);
 
     await disposeApp(tester);
   });

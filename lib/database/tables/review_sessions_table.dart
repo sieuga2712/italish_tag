@@ -2,7 +2,10 @@ import 'package:drift/drift.dart';
 
 /// Where a review session's word queue came from — used to reconstruct
 /// what the user was doing when looking at review history later.
-enum ReviewSourceType { due, weak, newWords, tag, mixed }
+///
+/// [manual] is a single word the user picked via "Review this word" on its
+/// Word Detail screen, rather than anything the queue builder assembled.
+enum ReviewSourceType { due, weak, newWords, tag, mixed, manual }
 
 @DataClassName('ReviewSession')
 class ReviewSessions extends Table {

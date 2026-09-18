@@ -2,13 +2,18 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../database/app_database.dart';
+import '../../database/tables/review_history_table.dart';
+import '../../database/tables/review_sessions_table.dart';
 import '../../database/tables/words_table.dart';
+import '../../providers/review_providers.dart';
 import '../../providers/word_providers.dart';
 import '../../utils/date_utils.dart';
 import '../../widgets/string_list_editor.dart';
 import '../../widgets/word_tags_section.dart';
+import '../review/review_session_args.dart';
 
 /// Word Detail screen (Phase 6) — the single place to view and edit
 /// everything about one word, replacing Phase 3's `CompleteWordSheet`.
@@ -253,6 +258,8 @@ class _WordDetailFormState extends ConsumerState<_WordDetailForm> {
           ),
           const SizedBox(height: 24),
           _LearningSection(word: liveWord),
+          const SizedBox(height: 16),
+          _HistorySection(wordId: widget.wordId),
         ],
       ),
     );
@@ -266,13 +273,38 @@ String _statusLabel(WordStatus status) => switch (status) {
   WordStatus.mastered => 'Mastered',
 };
 
-class _LearningSection extends StatelessWidget {
+class _LearningSection extends ConsumerStatefulWidget {
   const _LearningSection({required this.word});
 
   final Word word;
 
   @override
+  ConsumerState<_LearningSection> createState() => _LearningSectionState();
+}
+
+class _LearningSectionState extends ConsumerState<_LearningSection> {
+  bool _isStarting = false;
+
+  Future<void> _reviewThisWord() async {
+    setState(() => _isStarting = true);
+
+    final repository = ref.read(reviewRepositoryProvider);
+    final sessionId = await repository.startSession(
+      totalWords: 1,
+      sourceType: ReviewSourceType.manual,
+    );
+
+    if (!mounted) return;
+    setState(() => _isStarting = false);
+    context.push(
+      '/review-session',
+      extra: ReviewSessionArgs(sessionId: sessionId, queue: [widget.word]),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final word = widget.word;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -293,17 +325,101 @@ class _LearningSection extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             FilledButton.tonal(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Review this word sẽ có ở Phase 7'),
-                  ),
-                );
-              },
-              child: const Text('Review this word'),
+              onPressed: _isStarting ? null : _reviewThisWord,
+              child: _isStarting
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Review this word'),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+String _questionTypeLabel(ReviewQuestionType type) => switch (type) {
+  ReviewQuestionType.wordToMeaning => 'Word → Meaning',
+  ReviewQuestionType.meaningToWord => 'Meaning → Word',
+  ReviewQuestionType.multipleChoice => 'Multiple Choice',
+  ReviewQuestionType.fillBlank => 'Fill in the Blank',
+  ReviewQuestionType.sentenceContext => 'Sentence Context',
+  ReviewQuestionType.listening => 'Listening',
+};
+
+String _ratingLabel(ReviewRating rating) => switch (rating) {
+  ReviewRating.forgot => 'Quên',
+  ReviewRating.hard => 'Khó',
+  ReviewRating.good => 'Nhớ',
+  ReviewRating.easy => 'Rất dễ',
+};
+
+class _HistorySection extends ConsumerWidget {
+  const _HistorySection({required this.wordId});
+
+  final int wordId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final history = ref.watch(wordHistoryProvider(wordId));
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('History', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            history.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (error, stackTrace) => Text('Lỗi: $error'),
+              data: (entries) {
+                if (entries.isEmpty) {
+                  return const Text('Chưa có lịch sử ôn tập nào.');
+                }
+                return Column(
+                  children: entries
+                      .map((entry) => _HistoryRow(entry: entry))
+                      .toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HistoryRow extends StatelessWidget {
+  const _HistoryRow({required this.entry});
+
+  final ReviewHistoryEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            entry.isCorrect ? Icons.check_circle : Icons.cancel,
+            color: entry.isCorrect ? Colors.green : Colors.red,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${formatDate(entry.reviewedAt)} · ${_questionTypeLabel(entry.questionType)} · ${_ratingLabel(entry.rating)}',
+            ),
+          ),
+        ],
       ),
     );
   }

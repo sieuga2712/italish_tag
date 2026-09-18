@@ -5,6 +5,11 @@
 // - recordAnswer updates the word's counters/status/nextReviewAt, logs a
 //   ReviewHistory row, and tallies the session's correct/wrong counts
 // - watchQueueCounts reflects the same Due/Weak/New classification
+//
+// Phase 8 adds:
+// - getWeakWords/watchWeakWords rank worst wrong-rate first
+// - watchHistoryForWord returns one word's history, most recent first
+// - watchOverallStats computes all-time accuracy from ReviewHistory
 
 import 'package:drift/drift.dart' hide isNotNull;
 import 'package:drift/native.dart';
@@ -203,5 +208,107 @@ void main() {
     expect(counts.due, 1);
     expect(counts.weak, 1);
     expect(counts.newWords, 1);
+  });
+
+  test('getWeakWords ranks worst wrong-rate first', () async {
+    await db.into(db.words).insert(
+      WordsCompanion.insert(
+        word: 'somewhat-weak',
+        reviewCount: const Value(10),
+        wrongCount: const Value(3), // 30%
+      ),
+    );
+    await db.into(db.words).insert(
+      WordsCompanion.insert(
+        word: 'very-weak',
+        reviewCount: const Value(5),
+        wrongCount: const Value(4), // 80%
+      ),
+    );
+    await db.into(db.words).insert(
+      WordsCompanion.insert(word: 'not-weak-enough', reviewCount: const Value(2), wrongCount: const Value(2)),
+    ); // below the 3-review minimum
+
+    final weak = await reviewRepo.getWeakWords();
+
+    expect(weak.map((w) => w.word), ['very-weak', 'somewhat-weak']);
+  });
+
+  test('watchWeakWords matches getWeakWords and updates reactively', () async {
+    final wordId = await db
+        .into(db.words)
+        .insert(WordsCompanion.insert(word: 'efficient'));
+
+    expect(await reviewRepo.watchWeakWords().first, isEmpty);
+
+    await (db.update(
+      db.words,
+    )..where((w) => w.id.equals(wordId))).write(
+      const WordsCompanion(
+        reviewCount: Value(5),
+        wrongCount: Value(4),
+      ),
+    );
+
+    final weak = await reviewRepo.watchWeakWords().first;
+    expect(weak.map((w) => w.word), ['efficient']);
+  });
+
+  test('watchHistoryForWord returns entries most-recent first', () async {
+    final wordId = await db
+        .into(db.words)
+        .insert(WordsCompanion.insert(word: 'efficient'));
+    final sessionId = await reviewRepo.startSession(
+      totalWords: 2,
+      sourceType: ReviewSourceType.mixed,
+    );
+
+    await reviewRepo.recordAnswer(
+      wordId: wordId,
+      sessionId: sessionId,
+      questionType: ReviewQuestionType.wordToMeaning,
+      rating: ReviewRating.forgot,
+    );
+    await reviewRepo.recordAnswer(
+      wordId: wordId,
+      sessionId: sessionId,
+      questionType: ReviewQuestionType.wordToMeaning,
+      rating: ReviewRating.good,
+    );
+
+    final history = await reviewRepo.watchHistoryForWord(wordId).first;
+    expect(history, hasLength(2));
+    // Most recent (the "good" answer) first.
+    expect(history.first.rating, ReviewRating.good);
+    expect(history.last.rating, ReviewRating.forgot);
+  });
+
+  test('watchOverallStats computes all-time accuracy', () async {
+    expect((await reviewRepo.watchOverallStats().first).totalReviews, 0);
+
+    final wordId = await db
+        .into(db.words)
+        .insert(WordsCompanion.insert(word: 'efficient'));
+    final sessionId = await reviewRepo.startSession(
+      totalWords: 2,
+      sourceType: ReviewSourceType.mixed,
+    );
+    await reviewRepo.recordAnswer(
+      wordId: wordId,
+      sessionId: sessionId,
+      questionType: ReviewQuestionType.wordToMeaning,
+      rating: ReviewRating.good,
+    );
+    await reviewRepo.recordAnswer(
+      wordId: wordId,
+      sessionId: sessionId,
+      questionType: ReviewQuestionType.wordToMeaning,
+      rating: ReviewRating.forgot,
+    );
+
+    final stats = await reviewRepo.watchOverallStats().first;
+    expect(stats.totalReviews, 2);
+    expect(stats.totalCorrect, 1);
+    expect(stats.accuracy, 0.5);
   });
 }

@@ -113,6 +113,11 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
                         )
                       : const Text('Start Review'),
                 ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => context.push('/review/weak-words'),
+                  child: const Text('Xem Weak Words'),
+                ),
               ],
             ),
           );
